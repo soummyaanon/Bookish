@@ -1,4 +1,4 @@
-import { pdfjs } from "react-pdf"
+// pdfjs requires browser-only APIs (DOMMatrix) that don't exist in Node.js
 
 export interface PDFPage {
   pageNumber: number
@@ -8,18 +8,29 @@ export interface PDFPage {
 }
 
 let workerInitialized = false
+let pdfjs: typeof import("react-pdf").pdfjs | null = null
 
-function initWorker() {
-  if (!workerInitialized && typeof window !== "undefined") {
-    // Use unpkg which is more reliable than cdnjs for react-pdf
+async function initPdfJs() {
+  if (typeof window === "undefined") {
+    throw new Error("PDF processing is only available in the browser")
+  }
+
+  if (!pdfjs) {
+    const reactPdf = await import("react-pdf")
+    pdfjs = reactPdf.pdfjs
+  }
+
+  if (!workerInitialized) {
     pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
     workerInitialized = true
   }
+
+  return pdfjs
 }
 
 export async function extractPDFPages(file: File, onProgress?: (progress: number) => void): Promise<PDFPage[]> {
-  // Initialize worker before using pdfjs
-  initWorker()
+  // Dynamically import pdfjs to avoid SSR issues
+  const pdfjs = await initPdfJs()
 
   const arrayBuffer = await file.arrayBuffer()
 
