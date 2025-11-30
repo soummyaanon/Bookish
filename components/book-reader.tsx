@@ -4,7 +4,8 @@ import HTMLFlipBook from "react-pageflip"
 import type { BookData, ThemeMode, RenderMode } from "@/app/page"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Upload, BookOpen } from "lucide-react"
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Upload, BookOpen, Volume2, VolumeX } from "lucide-react"
+import { usePageFlipSound } from "@/hooks/use-page-flip-sound"
 
 interface BookReaderProps {
   book: BookData | null
@@ -174,6 +175,13 @@ export function BookReader({ book, onPageChange, onUploadClick, theme, renderMod
   const [currentPageDisplay, setCurrentPageDisplay] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [dimensions, setDimensions] = useState({ width: 400, height: 550 })
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [isFlipping, setIsFlipping] = useState(false)
+
+  const { playFlipSound } = usePageFlipSound({
+    enabled: soundEnabled,
+    volume: 0.35,
+  })
 
   const totalPages = book?.pages.length ?? 0
   const styles = getThemeStyles(theme, renderMode)
@@ -218,6 +226,15 @@ export function BookReader({ book, onPageChange, onUploadClick, theme, renderMod
     },
     [onPageChange, totalPages],
   )
+
+  const handleFlipStart = useCallback(() => {
+    setIsFlipping(true)
+    playFlipSound()
+  }, [playFlipSound])
+
+  const handleFlipEnd = useCallback(() => {
+    setIsFlipping(false)
+  }, [])
 
   const flipPrev = () => {
     flipBookRef.current?.pageFlip()?.flipPrev()
@@ -299,6 +316,14 @@ export function BookReader({ book, onPageChange, onUploadClick, theme, renderMod
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            title={soundEnabled ? "Mute page flip sound" : "Enable page flip sound"}
+          >
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
             disabled={zoom <= 0.5}
           >
@@ -327,7 +352,7 @@ export function BookReader({ book, onPageChange, onUploadClick, theme, renderMod
           }}
         >
           <div
-            className="book-wrapper relative"
+            className={`book-wrapper relative ${isFlipping ? "is-flipping" : ""}`}
             style={{
               display: "flex",
               alignItems: "center",
@@ -361,20 +386,24 @@ export function BookReader({ book, onPageChange, onUploadClick, theme, renderMod
               showCover={true}
               mobileScrollSupport={true}
               onFlip={handleFlip}
+              onChangeState={handleFlipEnd}
               className="book-shadow"
               style={{}}
               startPage={0}
               drawShadow={true}
-              flippingTime={600}
+              flippingTime={800}
               usePortrait={false}
               startZIndex={0}
               autoSize={false}
-              maxShadowOpacity={0.6}
+              maxShadowOpacity={0.7}
               clickEventForward={true}
               useMouseEvents={true}
               swipeDistance={30}
               showPageCorners={true}
               disableFlipByClick={false}
+              onChangeOrientation={() => {}}
+              onInit={() => {}}
+              onUpdate={() => {}}
             >
               {/* Front Cover */}
               <Cover title={book.title} theme={theme} type="front" />
@@ -432,36 +461,163 @@ export function BookReader({ book, onPageChange, onUploadClick, theme, renderMod
 
       <style jsx global>{`
         .book-shadow {
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 0, 0, 0.2);
+          box-shadow: 
+            0 10px 40px rgba(0, 0, 0, 0.4), 
+            0 0 20px rgba(0, 0, 0, 0.2),
+            0 2px 10px rgba(0, 0, 0, 0.1);
           border-radius: 4px;
+          perspective: 2000px;
         }
 
         .stf__wrapper {
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+          perspective: 2500px !important;
         }
 
         .stf__block {
           box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.1) !important;
         }
 
-        /* Page edge shadows for depth */
+        /* Enhanced page depth and edge shadows */
         .stf__item {
           box-shadow: 
-            inset 3px 0 10px rgba(0, 0, 0, 0.15),
-            inset -3px 0 10px rgba(0, 0, 0, 0.15) !important;
-        }
-
-        .page-content {
-          user-select: none;
-        }
-
-        /* Smooth flip animation enhancement */
-        .stf__item--left,
-        .stf__item--right {
+            inset 3px 0 15px rgba(0, 0, 0, 0.12),
+            inset -3px 0 15px rgba(0, 0, 0, 0.12),
+            inset 0 3px 10px rgba(0, 0, 0, 0.05),
+            inset 0 -3px 10px rgba(0, 0, 0, 0.05) !important;
           transition: box-shadow 0.3s ease;
         }
 
+        /* Page curl effect during flip */
+        .stf__item.--flipping {
+          box-shadow: 
+            inset 8px 0 25px rgba(0, 0, 0, 0.25),
+            inset -3px 0 15px rgba(0, 0, 0, 0.1),
+            0 5px 20px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        /* Left page styling - deeper shadow on inner edge */
+        .stf__item--left {
+          box-shadow: 
+            inset -8px 0 20px rgba(0, 0, 0, 0.15),
+            inset 3px 0 8px rgba(255, 255, 255, 0.05) !important;
+          border-right: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        /* Right page styling - deeper shadow on inner edge */
+        .stf__item--right {
+          box-shadow: 
+            inset 8px 0 20px rgba(0, 0, 0, 0.15),
+            inset -3px 0 8px rgba(255, 255, 255, 0.05) !important;
+          border-left: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        /* Enhanced flip animation */
+        .stf__item.--active {
+          z-index: 100 !important;
+        }
+
+        /* Page corner hover effect */
+        .stf__item::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(
+            135deg, 
+            transparent 50%, 
+            rgba(0, 0, 0, 0.03) 50%
+          );
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .stf__item--right:hover::after {
+          opacity: 1;
+        }
+
+        /* Paper texture overlay */
+        .page-content {
+          user-select: none;
+          position: relative;
+        }
+
+        .page-content::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+          opacity: 0.015;
+          pointer-events: none;
+          mix-blend-mode: multiply;
+        }
+
+        /* Smooth page turn transitions */
+        .stf__item {
+          transform-style: preserve-3d;
+          backface-visibility: hidden;
+        }
+
+        /* Book wrapper animation during flip */
+        .book-wrapper {
+          transition: transform 0.1s ease;
+        }
+
+        .book-wrapper.is-flipping {
+          transform: scale(1.002);
+        }
+
         .book-spine {
+          pointer-events: none;
+          transition: box-shadow 0.3s ease;
+        }
+
+        .book-wrapper.is-flipping .book-spine {
+          box-shadow: 
+            inset 0 0 6px rgba(0,0,0,0.5), 
+            0 0 12px rgba(0,0,0,0.4),
+            0 0 20px rgba(0,0,0,0.2);
+        }
+
+        /* Soft ambient lighting effect on pages */
+        .stf__item--left::before,
+        .stf__item--right::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(
+            to right,
+            rgba(0, 0, 0, 0.02) 0%,
+            transparent 10%,
+            transparent 90%,
+            rgba(0, 0, 0, 0.02) 100%
+          );
+          pointer-events: none;
+        }
+
+        /* Page lift shadow during flip */
+        .stf__item.--flipping::before {
+          content: '';
+          position: absolute;
+          bottom: -10px;
+          left: 10%;
+          right: 10%;
+          height: 20px;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(0, 0, 0, 0.2) 0%,
+            transparent 70%
+          );
+          filter: blur(5px);
           pointer-events: none;
         }
       `}</style>
