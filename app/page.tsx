@@ -1,21 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import dynamic from "next/dynamic"
 import { Sidebar } from "@/components/sidebar"
+import { BookReader } from "@/components/book-reader"
 import { UploadModal } from "@/components/upload-modal"
-import { Menu, Loader2 } from "lucide-react"
+import { Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { PDFPage } from "@/lib/pdf-utils"
-
-const BookReader = dynamic(() => import("@/components/book-reader").then((mod) => ({ default: mod.BookReader })), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-    </div>
-  ),
-})
 
 export type ThemeMode = "light" | "dark" | "red"
 export type RenderMode = "normal" | "high-contrast" | "sepia"

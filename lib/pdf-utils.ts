@@ -1,3 +1,5 @@
+import { pdfjs } from "react-pdf"
+
 export interface PDFPage {
   pageNumber: number
   imageDataUrl: string
@@ -5,26 +7,24 @@ export interface PDFPage {
   height: number
 }
 
-let pdfjs: typeof import("react-pdf").pdfjs | null = null
+let workerInitialized = false
 
-async function getPdfjs() {
-  if (!pdfjs) {
-    const reactPdf = await import("react-pdf")
-    pdfjs = reactPdf.pdfjs
-    // Set worker source after dynamic import
+function initWorker() {
+  if (!workerInitialized && typeof window !== "undefined") {
+    // Use unpkg which is more reliable than cdnjs for react-pdf
     pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+    workerInitialized = true
   }
-  return pdfjs
 }
 
 export async function extractPDFPages(file: File, onProgress?: (progress: number) => void): Promise<PDFPage[]> {
-  // Dynamically import pdfjs to avoid SSR issues
-  const pdfjsLib = await getPdfjs()
+  // Initialize worker before using pdfjs
+  initWorker()
 
   const arrayBuffer = await file.arrayBuffer()
 
   try {
-    const loadingTask = pdfjsLib.getDocument({
+    const loadingTask = pdfjs.getDocument({
       data: arrayBuffer,
     })
 
