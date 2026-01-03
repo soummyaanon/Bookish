@@ -52,8 +52,7 @@ export function Sidebar({
               <BookOpen className="h-5 w-5 text-sidebar-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-sidebar-foreground">PageFlip</h1>
-              <p className="text-xs text-sidebar-foreground/60">PDF Reader</p>
+              <h1 className="text-lg font-semibold text-sidebar-foreground">Readany</h1>
             </div>
           </div>
           <Button variant="ghost" size="icon" className="md:hidden text-sidebar-foreground" onClick={onClose}>
